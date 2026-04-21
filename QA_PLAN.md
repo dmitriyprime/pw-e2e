@@ -4,28 +4,70 @@
 
 ### 1.1 Start the mock API server
 
-The mock server simulates the external AI translation service. It prefixes every
-translated field with a language tag (e.g. `[DE] Original Name`) so you can
-verify each translation landed in the correct language slot.
+The mock server simulates the external AI translation service. It supports two modes:
+
+| Mode | How to start | What you get |
+|---|---|---|
+| **Mock** (default) | `node qa/mock-api-server.js` | Fields prefixed with language tag, e.g. `[DE] Original Name` — fast, no key needed |
+| **DeepL** | `DEEPL_API_KEY=your-key node qa/mock-api-server.js` | Real AI translations via DeepL Free API (500k chars/month free) |
+
+Get a free DeepL key at **https://www.deepl.com/pro-api** (Free plan). Free-tier keys end with `:fx`.
 
 **Requirements:** Node.js (no `npm install` needed — built-ins only).
 
+#### Local Shopware (same machine)
+
 ```bash
-# From the plugin root; keep this terminal open during QA
+# Mock mode — no key needed
 node qa/mock-api-server.js
 
+# DeepL mode — real translations
+DEEPL_API_KEY=your-key node qa/mock-api-server.js
+
 # Custom port (default 8765)
-PORT=9000 node qa/mock-api-server.js
+PORT=9000 DEEPL_API_KEY=your-key node qa/mock-api-server.js
 ```
 
-Verify it's alive:
+Verify it's alive (the `mode` field confirms which mode is active):
 ```bash
 curl http://localhost:8765/health
-# Expected: {"status":"ok","server":"GoAi Mock API (Node.js)"}
+# Mock:  {"status":"ok","server":"GoAi Mock API (Node.js)","mode":"mock"}
+# DeepL: {"status":"ok","server":"GoAi Mock API (Node.js)","mode":"deepl"}
 ```
 
-> If the Shopware dev server is inside a Docker container, start the mock server
-> **inside the container** (or use the host's IP instead of `localhost`).
+Use `http://localhost:8765/translate` as the API Endpoint in plugin settings.
+
+#### Remote Shopware server (ngrok tunnel)
+
+Run the mock server and ngrok in two separate terminals on your **local machine**:
+
+```bash
+# Terminal 1 — start mock server (add DEEPL_API_KEY=... for real translations)
+node qa/mock-api-server.js
+
+# Terminal 2 — expose it publicly (no install needed via npx)
+npx ngrok http 8765
+```
+
+ngrok prints a Forwarding URL, e.g.:
+```
+Forwarding  https://abc123.ngrok-free.app -> http://localhost:8765
+```
+
+Verify the tunnel works from anywhere:
+```bash
+curl https://abc123.ngrok-free.app/health
+# Expected: {"status":"ok",...}
+```
+
+Set **API Endpoint** in the remote Shopware plugin settings to:
+```
+https://abc123.ngrok-free.app/translate
+```
+
+> **Note:** The ngrok URL changes every time you restart ngrok. Update the API
+> Endpoint in plugin settings whenever you start a new ngrok session.
+> The free tier is sufficient for QA (low request volume).
 
 ---
 
