@@ -8,17 +8,19 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run format:check"
+    "check": "npm run lint && npm run format:check",
+    "setup": "npx tsx tests/run-setup.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.59.1",
     "@types/dotenv": "^6.1.1",
+    "@types/langdetect": "^0.2.2",
     "@types/node": "^25.6.0",
-    "@eslint/js": "^9.39.2",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
     "dotenv": "^17.2.3",
@@ -30,5 +32,10 @@
     "jiti": "^2.6.1",
     "prettier": "^3.8.0",
     "typescript-eslint": "^8.53.1"
+  },
+  "dependencies": {
+    "install": "^0.13.0",
+    "langdetect": "^0.2.1",
+    "npm": "^11.12.1"
   }
 }
