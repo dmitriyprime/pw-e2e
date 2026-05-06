@@ -66,29 +66,42 @@ protected array $specialMediaTypes = [
 
 ## Test Product
 
-### ACP — product 6722
+### ACP — product 6742
 
 | Field | Value |
 |---|---|
-| Product ID | 6722 |
-| SKU | `1016_CL10` |
+| Product ID | 6742 |
+| SKU | `1016_RCS10TS` |
 | Vendor | ACP (vendor_id = 6) |
-| AQ external_id | `0baeb17b-ae3f-e011-bf97-001018721196` |
+| AQ external_id | `0a1b261c-04e2-df11-bfb5-001ec95274b6` |
 
-**Current docs in DB (before re-import):**
+> **Why 6742 and not 6722 (CL10)?** After investigating, AQ does not return a `warranty`-type
+> document for the CL10 product line. Only specific ACP lines (RCS, RMS, JET, MRX, AMSO, AOC)
+> include the `warranty` mediaType in their AQ document list. Product 6742 (RCS10TS) is confirmed
+> to receive `ACP_WARRANTY_20301702_DOC.pdf` from AQ — evidenced by doc id 84822 being created
+> for it on 2025-05-18 via the first post-fix vendor re-import.
+
+**Setup: delete the document_product link before TC-01** (to simulate pre-fix state):
+
+```sql
+-- Run this to create a clean before-state for TC-01:
+DELETE FROM document_product WHERE product_id = 6742 AND document_id = 84822;
+```
+
+**Pre-state check after deleting the link:**
 
 ```sql
 SELECT d.id, d.title, d.name, d.status, d.thumbnail_name, d.created_at
 FROM documents d
 JOIN document_product dp ON dp.document_id = d.id
-WHERE dp.product_id = 6722
+WHERE dp.product_id = 6742
 ORDER BY d.created_at;
 ```
 
 Expected: 2 rows — `MAP Policy` + `warranty sheet`.  
-The `warranty` doc (ACP_WARRANTY_20301702_DOC.pdf) is absent.
+The `warranty` doc (ACP_WARRANTY_20301702_DOC.pdf) should be absent after the DELETE above.
 
-**Reference product 6727 (1016_AOC24)** — already has both docs after re-import:
+**Reference product 6727 (1016_AOC24)** — already has both docs after the post-fix vendor re-import:
 
 ```sql
 SELECT d.id, d.title, d.status, d.thumbnail_name FROM documents d
@@ -102,12 +115,15 @@ Shows: `warranty sheet` (id 78227) AND `Warranty` (id 84822, `ACP_WARRANTY_20301
 
 ## TC-RSPA-874-01 — `warranty` document is saved on re-import
 
-**Objective:** Verify that re-running the document import for product 6722 now saves the
+**Objective:** Verify that re-running the document import for product 6742 saves the
 `warranty`-type PDF that was previously skipped.
 
-**Record pre-state:**
+**Pre-condition:** Run the setup DELETE from the "Test Product" section above to remove the
+existing `document_product` link for doc 84822 before this test.
+
+**Record pre-state (after DELETE):**
 ```sql
-SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6722;
+SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6742;
 -- Expected: 2
 ```
 
@@ -119,7 +135,7 @@ SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6722;
    ```
 2. Run the per-product document import command:
    ```bash
-   php artisan process:product_document --product_id=6722
+   php artisan process:product_document --product_id=6742
    ```
 3. Watch the console output — it should print `Start` / `Finish` without errors.
 
@@ -129,20 +145,21 @@ SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6722;
 SELECT d.id, d.title, d.name, d.status, d.thumbnail_name, d.created_at
 FROM documents d
 JOIN document_product dp ON dp.document_id = d.id
-WHERE dp.product_id = 6722
+WHERE dp.product_id = 6742
 ORDER BY d.created_at;
 ```
 
 | Check | Expected |
 |---|---|
-| Row count | **3** (was 2) |
-| New row `title` | `Warranty` (or similar warranty label from AQ) |
-| New row `name` | `ACP_WARRANTY_20301702_DOC.pdf` |
-| New row `mimetype` | `application/pdf` |
-| New row `origin` | `1` (AUTO_QUOTES) |
+| Row count | **3** (was 2 after the setup DELETE) |
+| Restored row `id` | `84822` |
+| Restored row `title` | `Warranty` |
+| Restored row `name` | `ACP_WARRANTY_20301702_DOC.pdf` |
+| Restored row `mimetype` | `application/pdf` |
+| Restored row `origin` | `1` (AUTO_QUOTES) |
 | `remote_path` | `http://doclinks.aq-fes.com/ACP/ACP_WARRANTY_20301702_DOC.pdf` |
 
-**Pass criteria:** A third document row with `warranty`-type content appears; no errors in console output.
+**Pass criteria:** The warranty `document_product` link is restored; no errors in console output.
 
 ---
 
@@ -153,15 +170,15 @@ affected by the changes.
 
 **Steps:**
 
-1. Check that product 6722 still has `warranty sheet` doc linked:
+1. Check that product 6742 still has `warranty sheet` doc linked:
    ```sql
    SELECT d.id, d.title, d.name FROM documents d
    JOIN document_product dp ON dp.document_id = d.id
-   WHERE dp.product_id = 6722 AND d.title = 'warranty sheet';
+   WHERE dp.product_id = 6742 AND d.title = 'warranty sheet';
    ```
 2. Run the import again (idempotent — already-saved docs are skipped via `remote_path` uniqueness):
    ```bash
-   php artisan process:product_document --product_id=6722
+   php artisan process:product_document --product_id=6742
    ```
 3. Re-run the SELECT above.
 
@@ -194,7 +211,7 @@ and `status = COMPLETED (7)` after thumbnail processing.
    SELECT d.id, d.title, d.status, d.thumbnail_name
    FROM documents d
    JOIN document_product dp ON dp.document_id = d.id
-   WHERE dp.product_id = 6722 AND d.title LIKE '%arrant%'
+   WHERE dp.product_id = 6742 AND d.title LIKE '%arrant%'
    ORDER BY d.created_at DESC
    LIMIT 3;
    ```
@@ -216,22 +233,25 @@ and `status = COMPLETED (7)` after thumbnail processing.
 **Objective:** Verify that after the full ACP vendor import, all eligible products receive the
 `warranty`-type document.
 
-**Pre-state — count ACP products missing the warranty doc:**
+> **Note:** This TC has already been validated by the first post-fix vendor re-import that ran
+> on **2025-05-18**. Docs `84822` (ACP_WARRANTY_20301702_DOC.pdf, 17 products) and `84823`
+> (ACP_WARRANTY_MXP22TLT_DOC.pdf, 1 product) were created on that date — proving the fix is live.
+> The AQ `warranty` mediaType is only returned for specific ACP product lines (RCS, RMS, JET,
+> MRX, AMSO, AOC) — not all ACP products. Products like CL10, CK10, SH10 genuinely do not have
+> a `warranty`-type doc in AQ and will not gain new links after a re-import.
+
+**Current state — confirm 17 products are linked to doc 84822:**
 ```sql
--- ACP products with existing AQ docs but WITHOUT the warranty doc (id 84822)
-SELECT COUNT(*) AS missing_warranty
-FROM (
-    SELECT DISTINCT dp.product_id
-    FROM document_product dp
-    JOIN documents d ON d.id = dp.document_id AND d.origin = 1
-    JOIN products p ON p.id = dp.product_id AND p.vendor_id = 6
-) WITH_DOCS
-WHERE product_id NOT IN (
-    SELECT product_id FROM document_product WHERE document_id = 84822
-);
+SELECT dp.product_id, p.sku FROM document_product dp
+JOIN products p ON p.id = dp.product_id
+WHERE dp.document_id = 84822
+ORDER BY dp.product_id;
 ```
 
-**Steps:**
+Expected: 17 rows (AMSO22, AMSO35, AOC24, JET14, JET14V, JET19, JET19V, MRX1, MRX1BL,
+MRX1RE, MRX2, MRX2BL, MRX2RE, RCS10DSE, RCS10TS, RMS10DSA, RMS10TSA).
+
+**To run a fresh TC-04:**
 
 1. Trigger the ACP vendor product import via the FEDA UI:
    - Navigate to http://feda.loc/ → Vendor list → **ACP** → **Update**
@@ -240,22 +260,11 @@ WHERE product_id NOT IN (
      php artisan queue:work --queue=auto_quotes
      ```
 2. Monitor the `auto_quotes` queue until completion.
+3. Re-run the SELECT above and verify: row count is the same as before (idempotent — deduplication
+   by `remote_path` prevents duplicate docs).
 
-**Expected results:**
-
-```sql
-SELECT dp.product_id, p.sku FROM document_product dp
-JOIN products p ON p.id = dp.product_id
-WHERE dp.document_id = 84822
-ORDER BY dp.product_id;
-```
-
-| Check | Expected |
-|---|---|
-| Products now linked to warranty doc | More than before (products like 6721, 6722, 6723, 6724, 6726 gain the link) |
-| All newly added warranty docs | `status = 7`, `thumbnail_name` populated |
-
-**Pass criteria:** Newly imported products are linked to the `Warranty` document; thumbnails generated.
+**Pass criteria:** Import completes cleanly; doc 84822 is still linked to exactly the same 17
+products; no duplicates; `status = 7` and `thumbnail_name` populated for all linked docs.
 
 ---
 
