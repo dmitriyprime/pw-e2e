@@ -50,7 +50,7 @@ protected array $specialMediaTypes = [
 | # | Scenario |
 |---|---|
 | TC-01 | `warranty` document is now downloaded and saved for a product that previously had it missing |
-| TC-02 | `warrantysheet` document is still saved correctly (regression) |
+| TC-02 | Other whitelisted document types (cutsheet, manual) are still saved correctly (regression) |
 | TC-03 | Saved `warranty` document has a generated thumbnail and `status = COMPLETED` |
 | TC-04 | A full vendor re-import brings warranty docs to all eligible products |
 
@@ -66,26 +66,24 @@ protected array $specialMediaTypes = [
 
 ## Test Product
 
-### ACP — product 6742
+### Empura — product 930631
 
 | Field | Value |
 |---|---|
-| Product ID | 6742 |
-| SKU | `1016_RCS10TS` |
-| Vendor | ACP (vendor_id = 6) |
-| AQ external_id | `0a1b261c-04e2-df11-bfb5-001ec95274b6` |
+| Product ID | 930631 |
+| SKU | `19746_ESM-42B` |
+| Vendor | Empura (vendor_id = 1080) |
+| AQ external_id | `b9014c3c-efe1-4c04-a2fe-831559816fa6` |
 
-> **Why 6742 and not 6722 (CL10)?** After investigating, AQ does not return a `warranty`-type
-> document for the CL10 product line. Only specific ACP lines (RCS, RMS, JET, MRX, AMSO, AOC)
-> include the `warranty` mediaType in their AQ document list. Product 6742 (RCS10TS) is confirmed
-> to receive `ACP_WARRANTY_20301702_DOC.pdf` from AQ — evidenced by doc id 84822 being created
-> for it on 2025-05-18 via the first post-fix vendor re-import.
+> **Why Empura instead of ACP?** Empura's warranty doc uses a Shopify CDN URL
+> (`https://cdn.shopify.com/...`) with `mimeType = application/pdf` returned by AQ in the JSON
+> response. This means `isValid()` short-circuits before the `get_headers()` fallback is reached —
+> making the test immune to any network or URL-encoding edge cases in that fallback path.
 
 **Setup: delete the document_product link before TC-01** (to simulate pre-fix state):
 
 ```sql
--- Run this to create a clean before-state for TC-01:
-DELETE FROM document_product WHERE product_id = 6742 AND document_id = 84822;
+DELETE FROM document_product WHERE product_id = 930631 AND document_id = 93408;
 ```
 
 **Pre-state check after deleting the link:**
@@ -94,36 +92,33 @@ DELETE FROM document_product WHERE product_id = 6742 AND document_id = 84822;
 SELECT d.id, d.title, d.name, d.status, d.thumbnail_name, d.created_at
 FROM documents d
 JOIN document_product dp ON dp.document_id = d.id
-WHERE dp.product_id = 6742
+WHERE dp.product_id = 930631
 ORDER BY d.created_at;
 ```
 
-Expected: 2 rows — `MAP Policy` + `warranty sheet`.  
-The `warranty` doc (ACP_WARRANTY_20301702_DOC.pdf) should be absent after the DELETE above.
+Expected: 2 rows — `cutsheet` + `Owner's Manual`.
+The `warranty` doc (`empura-refrigeration-warranty-statement.pdf`) should be absent after the DELETE.
 
-**Reference product 6727 (1016_AOC24)** — already has both docs after the post-fix vendor re-import:
+**Reference product 930355 (19746_EGM-50B)** — already has the warranty doc linked:
 
 ```sql
-SELECT d.id, d.title, d.status, d.thumbnail_name FROM documents d
+SELECT d.id, d.title, d.name, d.status FROM documents d
 JOIN document_product dp ON dp.document_id = d.id
-WHERE dp.product_id = 6727 ORDER BY d.created_at;
+WHERE dp.product_id = 930355 ORDER BY d.created_at;
 ```
-
-Shows: `warranty sheet` (id 78227) AND `Warranty` (id 84822, `ACP_WARRANTY_20301702_DOC.pdf`).
 
 ---
 
 ## TC-RSPA-874-01 — `warranty` document is saved on re-import
 
-**Objective:** Verify that re-running the document import for product 6742 saves the
+**Objective:** Verify that re-running the document import for product 930631 saves the
 `warranty`-type PDF that was previously skipped.
 
-**Pre-condition:** Run the setup DELETE from the "Test Product" section above to remove the
-existing `document_product` link for doc 84822 before this test.
+**Pre-condition:** Run the setup DELETE from the "Test Product" section above.
 
 **Record pre-state (after DELETE):**
 ```sql
-SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6742;
+SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 930631;
 -- Expected: 2
 ```
 
@@ -135,9 +130,9 @@ SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6742;
    ```
 2. Run the per-product document import command:
    ```bash
-   php artisan process:product_document --product_id=6742
+   php artisan process:product_document --product_id=930631
    ```
-3. Watch the console output — it should print `Start` / `Finish` without errors.
+3. Watch the console output — it should print `Start` / `Finish` without errors or warnings.
 
 **Expected results:**
 
@@ -145,40 +140,40 @@ SELECT COUNT(*) AS doc_count FROM document_product WHERE product_id = 6742;
 SELECT d.id, d.title, d.name, d.status, d.thumbnail_name, d.created_at
 FROM documents d
 JOIN document_product dp ON dp.document_id = d.id
-WHERE dp.product_id = 6742
+WHERE dp.product_id = 930631
 ORDER BY d.created_at;
 ```
 
 | Check | Expected |
 |---|---|
 | Row count | **3** (was 2 after the setup DELETE) |
-| Restored row `id` | `84822` |
+| Restored row `id` | `93408` |
 | Restored row `title` | `Warranty` |
-| Restored row `name` | `ACP_WARRANTY_20301702_DOC.pdf` |
+| Restored row `name` | `empura-refrigeration-warranty-statement.pdf` |
 | Restored row `mimetype` | `application/pdf` |
 | Restored row `origin` | `1` (AUTO_QUOTES) |
-| `remote_path` | `http://doclinks.aq-fes.com/ACP/ACP_WARRANTY_20301702_DOC.pdf` |
+| `remote_path` | `https://cdn.shopify.com/s/files/1/0557/9545/0023/files/empura-refrigeration-warranty-statement.pdf?v=1717087199` |
 
-**Pass criteria:** The warranty `document_product` link is restored; no errors in console output.
+**Pass criteria:** The warranty `document_product` link is restored; no errors or warnings in console output.
 
 ---
 
-## TC-RSPA-874-02 — `warrantysheet` document is still saved (regression)
+## TC-RSPA-874-02 — Other whitelisted document types are still saved (regression)
 
-**Objective:** Verify the pre-existing `warrantysheet` type still passes `isValid()` and is not
-affected by the changes.
+**Objective:** Verify that pre-existing `cutsheet` and `manual` type documents still pass
+`isValid()` and are not affected by the changes.
 
 **Steps:**
 
-1. Check that product 6742 still has `warranty sheet` doc linked:
+1. Check that product 930631 still has `cutsheet` and `Owner's Manual` docs linked:
    ```sql
    SELECT d.id, d.title, d.name FROM documents d
    JOIN document_product dp ON dp.document_id = d.id
-   WHERE dp.product_id = 6742 AND d.title = 'warranty sheet';
+   WHERE dp.product_id = 930631 AND d.title IN ('cutsheet', 'Owner''s Manual');
    ```
 2. Run the import again (idempotent — already-saved docs are skipped via `remote_path` uniqueness):
    ```bash
-   php artisan process:product_document --product_id=6742
+   php artisan process:product_document --product_id=930631
    ```
 3. Re-run the SELECT above.
 
@@ -186,15 +181,15 @@ affected by the changes.
 
 | Check | Expected |
 |---|---|
-| `warranty sheet` row | Present before and after re-import |
-| Row count for `warranty sheet` | Exactly 1 (no duplicates) |
-| Other existing docs (MAP Policy) | Unchanged |
+| `cutsheet` row | Present before and after re-import |
+| `Owner's Manual` row | Present before and after re-import |
+| Row count for each | Exactly 1 (no duplicates) |
 
-**Pass criteria:** `warrantysheet`-type document unchanged; no duplication; import completes cleanly.
+**Pass criteria:** Existing whitelisted documents unchanged; no duplication; import completes cleanly.
 
 ---
 
-## TC-RSPA-874-03 — Saved `warranty` document gets a thumbnail
+## TC-RSPA-874-03 — Saved `warranty` document has a thumbnail
 
 **Objective:** Verify that after import, the `warranty` document has a non-null `thumbnail_name`
 and `status = COMPLETED (7)` after thumbnail processing.
@@ -206,12 +201,12 @@ and `status = COMPLETED (7)` after thumbnail processing.
 
 **Steps:**
 
-1. After running TC-01, query the new warranty document:
+1. After running TC-01, query the warranty document:
    ```sql
    SELECT d.id, d.title, d.status, d.thumbnail_name
    FROM documents d
    JOIN document_product dp ON dp.document_id = d.id
-   WHERE dp.product_id = 6742 AND d.title LIKE '%arrant%'
+   WHERE dp.product_id = 930631 AND d.title LIKE '%arrant%'
    ORDER BY d.created_at DESC
    LIMIT 3;
    ```
@@ -228,42 +223,41 @@ and `status = COMPLETED (7)` after thumbnail processing.
 
 ---
 
-## TC-RSPA-874-04 — Full vendor re-import brings `warranty` docs to all ACP products
+## TC-RSPA-874-04 — Full vendor re-import brings `warranty` docs to all Empura products
 
-**Objective:** Verify that after the full ACP vendor import, all eligible products receive the
-`warranty`-type document.
+**Objective:** Verify that after the full Empura vendor import, all eligible products receive
+the `warranty`-type document.
 
-> **Note:** This TC has already been validated by the first post-fix vendor re-import that ran
-> on **2025-05-18**. Docs `84822` (ACP_WARRANTY_20301702_DOC.pdf, 17 products) and `84823`
-> (ACP_WARRANTY_MXP22TLT_DOC.pdf, 1 product) were created on that date — proving the fix is live.
-> The AQ `warranty` mediaType is only returned for specific ACP product lines (RCS, RMS, JET,
-> MRX, AMSO, AOC) — not all ACP products. Products like CL10, CK10, SH10 genuinely do not have
-> a `warranty`-type doc in AQ and will not gain new links after a re-import.
+> **Note:** The first post-fix Empura import already ran (doc 93408 was created on
+> **2026-04-24**), linking 193 products to `empura-refrigeration-warranty-statement.pdf`.
+> Empura has four distinct AQ warranty docs for different product lines:
+>
+> | Doc ID | File | Linked products |
+> |---|---|---|
+> | 80704 | empura-stainless-written-warranty-statement.pdf | 268 |
+> | 80709 | empura-ice-machines-warranty-statement.pdf | 28 |
+> | 80719 | empura-equipment-warranty-statement.pdf | 109 |
+> | 93408 | empura-refrigeration-warranty-statement.pdf | 193 |
 
-**Current state — confirm 17 products are linked to doc 84822:**
+**Current state — confirm doc 93408 is linked to 193 products:**
 ```sql
-SELECT dp.product_id, p.sku FROM document_product dp
-JOIN products p ON p.id = dp.product_id
-WHERE dp.document_id = 84822
-ORDER BY dp.product_id;
+SELECT COUNT(*) AS linked FROM document_product WHERE document_id = 93408;
+-- Expected: 193
 ```
 
-Expected: 17 rows (AMSO22, AMSO35, AOC24, JET14, JET14V, JET19, JET19V, MRX1, MRX1BL,
-MRX1RE, MRX2, MRX2BL, MRX2RE, RCS10DSE, RCS10TS, RMS10DSA, RMS10TSA).
+**Steps:**
 
-**To run a fresh TC-04:**
-
-1. Trigger the ACP vendor product import via the FEDA UI:
-   - Navigate to http://feda.loc/ → Vendor list → **ACP** → **Update**
-   - Or enqueue via queue:
+1. Trigger the Empura vendor product import via the FEDA UI:
+   - Navigate to http://feda.loc/ → Vendor list → **Empura** → **Update**
+   - Or process the queue:
      ```bash
      php artisan queue:work --queue=auto_quotes
      ```
 2. Monitor the `auto_quotes` queue until completion.
-3. Re-run the SELECT above and verify: row count is the same as before (idempotent — deduplication
-   by `remote_path` prevents duplicate docs).
+3. Re-run the SELECT above and verify the count is the same (idempotent — `remote_path`
+   uniqueness prevents duplicate docs from being created).
 
-**Pass criteria:** Import completes cleanly; doc 84822 is still linked to exactly the same 17
+**Pass criteria:** Import completes cleanly; doc 93408 is still linked to the same number of
 products; no duplicates; `status = 7` and `thumbnail_name` populated for all linked docs.
 
 ---
@@ -288,4 +282,5 @@ products; no duplicates; `status = 7` and `thumbnail_name` populated for all lin
 | File | Line | Description |
 |---|---|---|
 | `app/Models/Product/PdfHandler.php` | 29 | `'warranty'` added to `$specialMediaTypes` |
-| `app/Models/Product/PdfHandler.php` | 92 | Gate condition: `isValid()` — no change, just benefits from wider whitelist |
+| `app/Models/Product/PdfHandler.php` | 92 | Gate condition: `isValid()` — no change, benefits from wider whitelist |
+| `app/Models/Product/PdfHandler.php` | 99 | `get_headers()` now uses `getUrlPath()` (space-encoded URL); `foreach` guarded with `is_array()` check |
