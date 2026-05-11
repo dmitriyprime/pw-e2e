@@ -235,73 +235,75 @@
 
 ## 4. PDF Document Processing
 
-### TC-PDF-001 — Upload a 1-page PDF and query its content
+> **Context:** PDF documents are already uploaded in the application and visible to shoppers in the **'Resources & Downloads'** section of the PDP storefront. The AI widget reads these pre-attached documents — there is no user-facing upload mechanism.
 
-| Field | Details |
-|-------|---------|
-| **ID** | TC-PDF-001 |
-| **Title** | Widget correctly parses a 1-page PDF and answers from it |
-| **Preconditions** | A 1-page product manual or cutsheet PDF is available. The widget supports document upload. |
-| **Steps** | 1. Open the product PDP with the AI chat widget. <br>2. Use the widget's upload feature to upload the 1-page PDF. <br>3. Wait for the upload to complete (confirmation message or indicator). <br>4. Ask a specific question whose answer appears in the PDF (e.g., "According to the manual, what is the recommended installation clearance?"). <br>5. Compare the response to the PDF content. |
-| **Expected Result** | The AI provides an answer that accurately reflects content from the uploaded PDF. |
-| **Actual Result** | |
-| **Status** | |
+### TC-PDF-001 — Query specific information from a pre-attached installation manual
 
----
-
-### TC-PDF-002 — Upload a 15-page PDF (at the limit) and query from the last page
-
-| Field | Details |
-|-------|---------|
-| **ID** | TC-PDF-002 |
-| **Title** | Widget correctly processes a 15-page PDF and retrieves content from the final page |
-| **Preconditions** | A 15-page PDF document is available. The widget supports document upload. |
-| **Steps** | 1. Open the product PDP with the AI chat widget. <br>2. Upload the 15-page PDF. <br>3. Wait for upload confirmation. <br>4. Ask a question whose answer appears specifically on page 15 of the document. <br>5. Compare the response to the actual page 15 content. |
-| **Expected Result** | The AI retrieves and returns accurate information from page 15, confirming full document processing at the 15-page boundary. |
-| **Actual Result** | |
-| **Status** | |
+| Field               | Details                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**              | TC-PDF-001                                                                                                                                                                                                                                                                                                                                                                         |
+| **Title**           | AI correctly answers a question using content from a pre-attached installation manual                                                                                                                                                                                                                                                                                              |
+| **Preconditions**   | A product PDP is open. At least one PDF (e.g., installation manual or user guide) is visible in the 'Resources & Downloads' section. The tester has reviewed the PDF and identified a specific fact it contains (e.g., recommended installation clearance, required voltage).                                                                                                      |
+| **Steps**           | 1. Confirm the PDF document is visible in the 'Resources & Downloads' section of the PDP. <br>2. Open the AI chat widget. <br>3. Ask a question whose answer exists in the PDF but is not displayed directly on the PDP (e.g., `According to the installation manual, what is the recommended installation clearance?`). <br>4. Compare the AI response to the actual PDF content. |
+| **Expected Result** | The AI provides an accurate answer that reflects content from the pre-attached PDF. The response is not fabricated from general knowledge.                                                                                                                                                                                                                                         |
+| **Actual Result**   |                                                                                                                                                                                                                                                                                                                                                                                    |
+| **Status**          |                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ---
 
-### TC-PDF-003 — Upload a PDF exceeding 15 pages
+### TC-PDF-002 — Query specific measurements from a pre-attached cutsheet
 
-| Field | Details |
-|-------|---------|
-| **ID** | TC-PDF-003 |
-| **Title** | Widget gracefully rejects or limits PDF documents exceeding 15 pages |
-| **Preconditions** | A PDF document with more than 15 pages is available. |
-| **Steps** | 1. Open the product PDP with the AI chat widget. <br>2. Attempt to upload a PDF that is 16 or more pages. <br>3. Observe the widget's response/behavior. |
-| **Expected Result** | The widget either: (a) rejects the upload with a clear error message stating the 15-page limit, OR (b) accepts the document but notifies the user that only the first 15 pages will be processed. No silent failure occurs. |
-| **Actual Result** | |
-| **Status** | |
-
----
-
-### TC-PDF-004 — Query specific measurements from a cutsheet PDF
-
-| Field | Details |
-|-------|---------|
-| **ID** | TC-PDF-004 |
-| **Title** | Widget correctly extracts specific numeric/measurement data from a cutsheet PDF |
-| **Preconditions** | A cutsheet PDF containing product measurements (e.g., width, depth, height) is available. |
-| **Steps** | 1. Upload the cutsheet PDF via the widget. <br>2. Note a specific measurement value listed in the PDF. <br>3. Ask: `What are the dimensions listed in the cutsheet?` <br>4. Compare the AI response to the actual values in the PDF. |
-| **Expected Result** | The AI accurately reports the specific measurements from the cutsheet. No values are rounded, approximated, or swapped. |
-| **Actual Result** | |
-| **Status** | |
+| Field               | Details                                                                                                                                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**              | TC-PDF-002                                                                                                                                                                                                                                                                                        |
+| **Title**           | AI correctly extracts specific numeric/measurement data from a pre-attached cutsheet PDF                                                                                                                                                                                                          |
+| **Preconditions**   | A product PDP is open. A cutsheet PDF containing product measurements (e.g., width, depth, height) is visible in 'Resources & Downloads'. The tester has noted at least one specific measurement value from the PDF.                                                                              |
+| **Steps**           | 1. Confirm the cutsheet PDF is visible in 'Resources & Downloads'. <br>2. Note a specific measurement value listed in the cutsheet. <br>3. Open the AI chat widget. <br>4. Ask: `What are the dimensions listed in the cutsheet?` <br>5. Compare the AI response to the actual values in the PDF. |
+| **Expected Result** | The AI accurately reports the specific measurements from the cutsheet. No values are rounded, approximated, or transposed.                                                                                                                                                                        |
+| **Actual Result**   |                                                                                                                                                                                                                                                                                                   |
+| **Status**          |                                                                                                                                                                                                                                                                                                   |
 
 ---
 
-### TC-PDF-005 — Upload an unrelated document and ask a product question
+### TC-PDF-003 — Query content from the final page of a multi-page pre-attached document
 
-| Field | Details |
-|-------|---------|
-| **ID** | TC-PDF-005 |
-| **Title** | Widget falls back to PDP data when uploaded PDF has no relevant product info |
-| **Preconditions** | A PDF that contains no information about the current product is available (e.g., a generic brochure or unrelated manual). |
-| **Steps** | 1. Upload the unrelated PDF via the widget. <br>2. Ask: `What is the price of this product?` <br>3. Observe whether the AI uses the PDF or falls back to PDP data. |
-| **Expected Result** | The AI answers from PDP data (correct price) rather than the unrelated PDF. It does not fabricate an answer from the PDF. |
-| **Actual Result** | |
-| **Status** | |
+| Field               | Details                                                                                                                                                                                                                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**              | TC-PDF-003                                                                                                                                                                                                                                                                                                              |
+| **Title**           | AI retrieves accurate information from the last page of a multi-page pre-attached document                                                                                                                                                                                                                              |
+| **Preconditions**   | A product PDP is open. A multi-page PDF is visible in 'Resources & Downloads'. The tester has reviewed the final page and identified a specific piece of information present only there (e.g., a warranty statement, a compliance table, a part number list).                                                           |
+| **Steps**           | 1. Confirm the multi-page PDF is visible in 'Resources & Downloads'. <br>2. Note the specific content on the final page of the document. <br>3. Open the AI chat widget. <br>4. Ask a question whose answer appears only on the final page of the PDF. <br>5. Compare the AI response to the actual final-page content. |
+| **Expected Result** | The AI retrieves and returns accurate information from the final page, confirming that the full document is processed and not truncated.                                                                                                                                                                                |
+| **Actual Result**   |                                                                                                                                                                                                                                                                                                                         |
+| **Status**          |                                                                                                                                                                                                                                                                                                                         |
+
+---
+
+### TC-PDF-004 — Query when multiple PDFs are present in Resources & Downloads
+
+| Field               | Details                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**              | TC-PDF-004                                                                                                                                                                                                                                                                                                  |
+| **Title**           | AI correctly identifies and queries the relevant document when multiple PDFs are attached                                                                                                                                                                                                                   |
+| **Preconditions**   | A product PDP is open. At least two different PDFs (e.g., an installation manual AND a cutsheet) are visible in 'Resources & Downloads'. The tester has identified a fact that exists in only one of the documents.                                                                                         |
+| **Steps**           | 1. Confirm multiple PDFs are visible in 'Resources & Downloads'. <br>2. Open the AI chat widget. <br>3. Ask a question that is specific to one document (e.g., `What does the installation guide say about electrical requirements?`). <br>4. Observe which document the AI references and verify accuracy. |
+| **Expected Result** | The AI correctly references the relevant document and returns accurate information. It does not confuse or blend content between documents.                                                                                                                                                                 |
+| **Actual Result**   |                                                                                                                                                                                                                                                                                                             |
+| **Status**          |                                                                                                                                                                                                                                                                                                             |
+
+---
+
+### TC-PDF-005 — Query product info that exists only in a PDF, not on the PDP page itself
+
+| Field               | Details                                                                                                                                                                                                                                                                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**              | TC-PDF-005                                                                                                                                                                                                                                                                                                                                      |
+| **Title**           | AI surfaces product information present only in a pre-attached PDF, not on the visible PDP                                                                                                                                                                                                                                                      |
+| **Preconditions**   | A product PDP is open. A PDF in 'Resources & Downloads' contains information (e.g., maintenance intervals, safety ratings, installation torque specs) that is NOT displayed anywhere on the PDP page itself.                                                                                                                                    |
+| **Steps**           | 1. Identify a specific piece of information present only in the PDF and not on the PDP page. <br>2. Open the AI chat widget. <br>3. Ask the AI about that information (e.g., `What maintenance intervals are required for this product?`). <br>4. Compare the response to the PDF content and confirm it is not displayed elsewhere on the PDP. |
+| **Expected Result** | The AI accurately retrieves and presents the information from the pre-attached PDF. It does not fabricate an answer from PDP-visible data alone.                                                                                                                                                                                                |
+| **Actual Result**   |                                                                                                                                                                                                                                                                                                                                                 |
+| **Status**          |                                                                                                                                                                                                                                                                                                                                                 |
 
 ---
 
